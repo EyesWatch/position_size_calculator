@@ -5,101 +5,239 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Position Size Calculator (Offline)</title>
   <style>
-    body{font-family:sans-serif;background:#0f1115;color:#eaeaea;margin:0;padding:20px}
-    .card{background:#161a22;border:1px solid #252a34;border-radius:12px;padding:16px;max-width:900px;margin:auto}
-    label{display:block;margin-top:10px}
-    input,select,button{width:100%;padding:8px;margin-top:4px;background:#0f1115;color:#eaeaea;border:1px solid #2c3340;border-radius:6px}
-    button{background:#2871ff;cursor:pointer;margin-top:14px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-    .result{margin-top:14px;padding:10px;border:1px dashed #444;border-radius:6px}
-    small{color:#9aa2b2}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#0f1115;color:#eaeaea;margin:0}
+    .wrap{max-width:1000px;margin:0 auto;padding:18px}
+    h2{margin:0 0 12px 0;font-size:20px}
+    .card{background:#161a22;border:1px solid #252a34;border-radius:12px;padding:16px;box-shadow:0 2px 16px rgba(0,0,0,.25)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+    label{display:block;font-size:13px;margin-bottom:6px;color:#b9c0ce}
+    input,select,button{width:100%;box-sizing:border-box;background:#0f1115;color:#eaeaea;border:1px solid #2c3340;border-radius:8px;padding:10px 12px;font-size:14px;outline:none}
+    input:focus,select:focus{border-color:#4b9cff;box-shadow:0 0 0 3px rgba(75,156,255,.15)}
+    button{cursor:pointer;background:#2871ff;border-color:#2871ff}
+    button:hover{filter:brightness(1.05)}
+    .muted{color:#9aa3b2;font-size:12px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+    .chip{border:1px solid #3a4254;border-radius:999px;padding:6px 10px;cursor:pointer;font-size:12px;background:#101420}
+    .chip:hover{border-color:#4b9cff}
+    .result{margin-top:14px;padding:12px;border:1px dashed #3a4254;border-radius:8px;line-height:1.6}
+    .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:8px}
+    .kpi > div{background:#0f1115;border:1px dashed #343b49;border-radius:10px;padding:10px}
+    .footer{opacity:.7;font-size:12px;text-align:center;margin-top:12px}
   </style>
 </head>
 <body>
-<div class="card">
-  <h2>Position Size Calculator — Offline</h2>
-  <div class="grid">
-    <div><label>Solde du compte<input id="balance" type="number" value="10000"></label></div>
-    <div><label>Risque %<input id="riskPct" type="number" value="1"></label></div>
-    <div><label>Entrée<input id="entry" type="number" step="0.0001"></label></div>
-    <div><label>Stop-Loss (prix)<input id="sl" type="number" step="0.0001"></label></div>
-    <div><label>Take-Profit (optionnel)<input id="tp" type="number" step="0.0001"></label></div>
-    <div>
-      <label>Valeur pip/tick par 1 lot<input id="pipValue" type="number" value="10"></label>
-      <small>Ex: EURUSD ≈ 10 $/pip/lot. Adaptez selon votre broker.</small>
+<div class="wrap">
+  <div class="card">
+    <h2>Position Size Calculator — Offline (FTMO: 3 $/lot <i>per side</i> par défaut)</h2>
+
+    <div class="row">
+      <span class="muted">Presets :</span>
+      <span class="chip" onclick="preset('EURUSD')">EURUSD</span>
+      <span class="chip" onclick="preset('GBPUSD')">GBPUSD</span>
+      <span class="chip" onclick="preset('USDJPY')">USDJPY</span>
+      <span class="chip" onclick="preset('XAUUSD')">XAUUSD</span>
+      <span class="chip" onclick="preset('NAS100')">NAS100</span>
+      <span class="chip" onclick="preset('GER40')">GER40</span>
     </div>
-    <div>
-      <label>Buffer spread/slippage (pips/ticks)<input id="buffer" type="number" step="0.01" value="0"></label>
-      <small>Ajouté à la distance du SL (sécurité).</small>
-    </div>
-    <div>
-      <label>Commission par lot (round‑trip)<input id="commission" type="number" step="0.01" value="3"></label>
-      <small>Par défaut FTMO Forex ≈ 3 $ par lot (aller+retour). Modifiez si besoin.</small>
-    </div>
-    <div>
-      <label>Incrément de lot
+
+    <div class="grid">
+      <div>
+        <label>Solde du compte</label>
+        <input id="balance" type="text" value="100000">
+      </div>
+      <div>
+        <label>Risque par trade (% du solde)</label>
+        <input id="riskPct" type="text" value="1">
+      </div>
+      <div>
+        <label>Prix d'entrée</label>
+        <input id="entry" type="text" placeholder="ex. 1.20000">
+      </div>
+      <div>
+        <label>Stop-Loss (prix)</label>
+        <input id="sl" type="text" placeholder="ex. 1.19500">
+      </div>
+      <div>
+        <label>Take-Profit (prix) — optionnel</label>
+        <input id="tp" type="text" placeholder="ex. 1.21000">
+      </div>
+      <div>
+        <label><b>Taille du pip/tick</b> (ex: EURUSD 0.0001, USDJPY 0.01, XAUUSD 0.1, indices 1)</label>
+        <input id="pipSize" type="text" value="0.0001">
+        <div class="muted">Convertit la distance en <i>pips/ticks</i>.</div>
+      </div>
+      <div>
+        <label><b>Valeur du pip/tick</b> (1 lot, devise du compte)</label>
+        <input id="pipValue" type="text" value="10">
+        <div class="muted">Ex: EURUSD ≈ 10 $/pip/lot ; XAUUSD ≈ 1 $/0.1$/lot ; indices souvent 1 $/point/lot.</div>
+      </div>
+      <div>
+        <label>Buffer spread/slippage (en pips/ticks)</label>
+        <input id="buffer" type="text" value="0">
+        <div class="muted">Ajouté à la distance du SL.</div>
+      </div>
+      <div>
+        <label>Commission par lot</label>
+        <div class="row" style="gap:6px">
+          <select id="commissionType" style="max-width:140px">
+            <option value="perSide" selected>par side (one-way)</option>
+            <option value="roundTrip">round-trip</option>
+          </select>
+          <input id="commission" type="text" value="3" style="max-width:140px">
+        </div>
+        <div class="muted">FTMO Forex souvent ≈ 3 $/lot <i>par side</i> (soit 6 $ RT).</div>
+      </div>
+      <div>
+        <label>Décimales de lot</label>
         <select id="lotStep">
           <option value="1">1.00</option>
           <option value="0.1">0.10</option>
           <option value="0.01" selected>0.01</option>
           <option value="0.001">0.001</option>
         </select>
-      </label>
+      </div>
+      <div>
+        <label>Arrondi</label>
+        <select id="roundMode">
+          <option value="down" selected>Inférieur (sécurité)</option>
+          <option value="nearest">Au plus proche</option>
+          <option value="up">À la hausse</option>
+        </select>
+      </div>
+      <div>
+        <label>Inclure commissions dans R:R</label>
+        <select id="rrIncludesFees">
+          <option value="yes" selected>Oui (style EarnForex)</option>
+          <option value="no">Non (prix uniquement)</option>
+        </select>
+      </div>
     </div>
+
+    <div class="row">
+      <button id="calcBtn">Calculer</button>
+      <button id="resetBtn" style="background:#3a4254;border-color:#3a4254">Réinitialiser</button>
+    </div>
+
+    <div id="out" class="result"></div>
   </div>
 
-  <button id="calcBtn">Calculer</button>
-  <div id="out" class="result"></div>
+  <div class="footer">Hors-ligne. Ajoutez à iOS via Safari → Partager → Ajouter à l’écran d’accueil (depuis une URL http/https).</div>
 </div>
 
 <script>
-function roundStep(v,step){return Math.floor(v/step)*step;}
+const PRESETS = {
+  EURUSD: { pipSize: 0.0001, pipValue: 10, lotStep: 0.01 },
+  GBPUSD: { pipSize: 0.0001, pipValue: 10, lotStep: 0.01 },
+  USDJPY: { pipSize: 0.01,   pipValue: 9.1, lotStep: 0.01 },
+  XAUUSD: { pipSize: 0.1,    pipValue: 1,   lotStep: 0.01 },
+  NAS100: { pipSize: 1,      pipValue: 1,   lotStep: 0.1  },
+  GER40:  { pipSize: 1,      pipValue: 1,   lotStep: 0.1  }
+};
+
+function preset(sym){
+  const p = PRESETS[sym]; if(!p) return;
+  document.getElementById('pipSize').value = p.pipSize;
+  document.getElementById('pipValue').value = p.pipValue;
+  document.getElementById('lotStep').value = p.lotStep;
+}
+
+function parseNum(id){
+  const s = document.getElementById(id).value.replace(',', '.');
+  return parseFloat(s);
+}
+function roundStep(value, step, mode){
+  const inv = 1/step;
+  if(mode==='down') return Math.floor(value*inv)/inv;
+  if(mode==='up') return Math.ceil(value*inv)/inv;
+  return Math.round(value*inv)/inv;
+}
 
 function compute(){
-  const get = id => document.getElementById(id).value;
-  const bal = parseFloat(get('balance'));
-  const riskPct = parseFloat(get('riskPct'));
-  const entry = parseFloat(get('entry'));
-  const sl = parseFloat(get('sl'));
-  const tpVal = get('tp');
-  const tp = tpVal==='' ? null : parseFloat(tpVal);
-  const pipValue = parseFloat(get('pipValue'));
-  const buffer = parseFloat(get('buffer')) || 0;
-  const commission = parseFloat(get('commission')) || 0; // $ per lot round-trip
-  const lotStep = parseFloat(get('lotStep'));
+  const bal = parseNum('balance');
+  const riskPct = parseNum('riskPct');
+  const entry = parseNum('entry');
+  const sl = parseNum('sl');
+  const tpVal = document.getElementById('tp').value;
+  const tp = tpVal==='' ? null : parseFloat(tpVal.replace(',','.'));
+  const pipSize = parseNum('pipSize');
+  const pipValue = parseNum('pipValue');
+  const buffer = parseNum('buffer') || 0;
+  const commission = parseNum('commission') || 0;
+  const commissionType = document.getElementById('commissionType').value;
+  const lotStep = parseNum('lotStep');
+  const roundMode = document.getElementById('roundMode').value;
+  const rrIncludesFees = document.getElementById('rrIncludesFees').value;
   const out = document.getElementById('out');
 
-  if(![bal,riskPct,entry,sl,pipValue].every(isFinite)){
-    out.innerHTML="Veuillez remplir solde, risque %, entrée, SL et valeur pip/tick.";
-    return;
+  if(![bal,riskPct,entry,sl,pipSize,pipValue].every(x=>isFinite(x))){
+    out.innerHTML = "Veuillez remplir solde, risque %, entrée, SL, taille & valeur du pip/tick."; return;
   }
+  if(pipSize <= 0){ out.innerHTML = "La taille du pip/tick doit être > 0."; return; }
+
   const riskAmt = bal * (riskPct/100);
   const distPrice = Math.abs(entry - sl);
-  if(distPrice === 0){ out.innerHTML="Distance entrée/SL invalide."; return; }
+  const distPips = distPrice / pipSize;
+  if(distPips === 0){ out.innerHTML = "Distance entrée→SL invalide."; return; }
 
-  // Money per lot for price distance + buffer
-  const distMoneyPerLot = distPrice * pipValue;
-  const bufferMoneyPerLot = (buffer || 0) * pipValue;
+  const distMoneyPerLot = distPips * pipValue;
+  const bufferMoneyPerLot = buffer * pipValue;
+  const commissionRT = (commissionType === 'perSide') ? commission*2 : commission; // convert to round-trip
 
-  // Total risk per lot includes buffer + commission
-  const riskPerLot = distMoneyPerLot + bufferMoneyPerLot + commission;
-
+  const riskPerLot = distMoneyPerLot + bufferMoneyPerLot + commissionRT;
   const rawLot = riskAmt / riskPerLot;
-  const lot = Math.max(roundStep(rawLot, lotStep), lotStep);
+  let lot = Math.max(roundStep(rawLot, lotStep, roundMode), lotStep);
 
   const impliedRisk = lot * riskPerLot;
-  const reward = (tp!==null && isFinite(tp)) ? lot * Math.abs(tp - entry) * pipValue : null;
-  const rr = reward ? (reward / (lot * (distMoneyPerLot + bufferMoneyPerLot))).toFixed(2) : "-"; // R:R sans commission
 
-  out.innerHTML = [
-    "Lot: <b>"+lot.toFixed(3)+"</b>",
-    "Risque ≈ <b>"+impliedRisk.toFixed(2)+"</b> (incl. buffer & commission)",
-    "Détail par lot: distance "+distMoneyPerLot.toFixed(2)+" + buffer "+bufferMoneyPerLot.toFixed(2)+" + commission "+commission.toFixed(2),
-    "R:R (si TP) = <b>"+rr+"</b>"
-  ].join("<br>");
+  // R:R
+  let rrPriceOnly = "-";
+  let rrWithFees = "-";
+  if(tp !== null && isFinite(tp)){
+    const rewardPips = Math.abs(tp - entry) / pipSize;
+    const rewardMoneyPerLot = rewardPips * pipValue;
+    rrPriceOnly = (rewardMoneyPerLot / (distMoneyPerLot + bufferMoneyPerLot)).toFixed(2);
+    const rewardNet = Math.max(0, rewardMoneyPerLot - commissionRT);
+    rrWithFees = (rewardNet / (distMoneyPerLot + bufferMoneyPerLot + commissionRT)).toFixed(2);
+  }
+  const rrDisplay = (rrIncludesFees === 'yes') ? rrWithFees : rrPriceOnly;
+
+  out.innerHTML = `
+    <div class="kpi">
+      <div><b>Taille de lot (arrondie)</b><div>${lot.toFixed(2)}</div></div>
+      <div><b>Taille brute (non arrondie)</b><div>${rawLot.toFixed(4)}</div></div>
+      <div><b>Risque ≈</b><div>${impliedRisk.toFixed(2)}</div></div>
+      <div><b>Distance (pips/ticks)</b><div>${distPips.toFixed(2)}</div></div>
+      <div><b>Valeur pip/tick (1 lot)</b><div>${pipValue}</div></div>
+      <div><b>Commission RT/lot</b><div>${commissionRT.toFixed(2)}</div></div>
+      <div><b>Buffer (pips/ticks)</b><div>${buffer}</div></div>
+      ${isFinite(tp) ? `<div><b>R:R</b><div>${rrDisplay} : 1</div></div>` : ""}
+    </div>
+    <div class="muted">Formule : lot = Risque$ / [(|Entrée−SL|/pipSize)*pipValue + buffer*pipValue + commission<sub>RT/lot</sub>]. 
+    R:R (avec frais) = (Récompense<sub>prix</sub> − commission<sub>RT</sub>) / (Risque<sub>prix</sub> + commission<sub>RT</sub>).</div>
+  `;
+
+  // autosave
+  const toSave = ['balance','riskPct','entry','sl','tp','pipSize','pipValue','buffer','commission','commissionType','lotStep','roundMode','rrIncludesFees'];
+  const state = {};
+  toSave.forEach(id => { state[id] = document.getElementById(id).value; });
+  localStorage.setItem('psc_state', JSON.stringify(state));
+}
+
+function restore(){
+  try{
+    const raw = localStorage.getItem('psc_state');
+    if(!raw) return;
+    const st = JSON.parse(raw);
+    Object.entries(st).forEach(([k,v])=>{
+      const el = document.getElementById(k);
+      if(el) el.value = v;
+    });
+  }catch(e){}
 }
 
 document.getElementById('calcBtn').addEventListener('click', compute);
+document.getElementById('resetBtn').addEventListener('click', ()=>{ localStorage.removeItem('psc_state'); location.reload(); });
+restore();
 </script>
 </body>
 </html>
